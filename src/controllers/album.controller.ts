@@ -16,14 +16,18 @@ import {
   del,
   requestBody,
   response,
+  RestBindings,
+  Response,
 } from '@loopback/rest';
 import {Album} from '../models';
 import {AlbumRepository} from '../repositories';
+import {inject} from '@loopback/core';
 
 export class AlbumController {
   constructor(
     @repository(AlbumRepository)
-    public albumRepository : AlbumRepository,
+    public albumRepository: AlbumRepository,
+    @inject(RestBindings.Http.RESPONSE) private response: Response,
   ) {}
 
   @post('/albums')
@@ -52,9 +56,7 @@ export class AlbumController {
     description: 'Album model count',
     content: {'application/json': {schema: CountSchema}},
   })
-  async count(
-    @param.where(Album) where?: Where<Album>,
-  ): Promise<Count> {
+  async count(@param.where(Album) where?: Where<Album>): Promise<Count> {
     return this.albumRepository.count(where);
   }
 
@@ -70,9 +72,14 @@ export class AlbumController {
       },
     },
   })
-  async find(
-    @param.filter(Album) filter?: Filter<Album>,
-  ): Promise<Album[]> {
+  async find(@param.filter(Album) filter?: Filter<Album>): Promise<Album[]> {
+    const Data = this.albumRepository.find(filter);
+
+    this.response.set('Access-Control-Expose-Headers', 'X-Total-Count');
+    this.response.set('x-total-count', (await Data).length.toString());
+
+    return Data;
+
     return this.albumRepository.find(filter);
   }
 
@@ -106,7 +113,8 @@ export class AlbumController {
   })
   async findById(
     @param.path.number('id') id: number,
-    @param.filter(Album, {exclude: 'where'}) filter?: FilterExcludingWhere<Album>
+    @param.filter(Album, {exclude: 'where'})
+    filter?: FilterExcludingWhere<Album>,
   ): Promise<Album> {
     return this.albumRepository.findById(id, filter);
   }

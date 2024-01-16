@@ -16,14 +16,18 @@ import {
   del,
   requestBody,
   response,
+  RestBindings,
+  Response,
 } from '@loopback/rest';
 import {Artista} from '../models';
 import {ArtistaRepository} from '../repositories';
+import {inject} from '@loopback/core';
 
 export class ArtistaController {
   constructor(
     @repository(ArtistaRepository)
-    public artistaRepository : ArtistaRepository,
+    public artistaRepository: ArtistaRepository,
+    @inject(RestBindings.Http.RESPONSE) private response: Response,
   ) {}
 
   @post('/artistas')
@@ -52,9 +56,7 @@ export class ArtistaController {
     description: 'Artista model count',
     content: {'application/json': {schema: CountSchema}},
   })
-  async count(
-    @param.where(Artista) where?: Where<Artista>,
-  ): Promise<Count> {
+  async count(@param.where(Artista) where?: Where<Artista>): Promise<Count> {
     return this.artistaRepository.count(where);
   }
 
@@ -73,6 +75,13 @@ export class ArtistaController {
   async find(
     @param.filter(Artista) filter?: Filter<Artista>,
   ): Promise<Artista[]> {
+    const Data = this.artistaRepository.find(filter);
+
+    this.response.set('Access-Control-Expose-Headers', 'X-Total-Count');
+    this.response.set('x-total-count', (await Data).length.toString());
+
+    return Data;
+
     return this.artistaRepository.find(filter);
   }
 
@@ -106,7 +115,8 @@ export class ArtistaController {
   })
   async findById(
     @param.path.number('id') id: number,
-    @param.filter(Artista, {exclude: 'where'}) filter?: FilterExcludingWhere<Artista>
+    @param.filter(Artista, {exclude: 'where'})
+    filter?: FilterExcludingWhere<Artista>,
   ): Promise<Artista> {
     return this.artistaRepository.findById(id, filter);
   }

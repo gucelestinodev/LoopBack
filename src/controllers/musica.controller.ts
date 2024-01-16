@@ -16,14 +16,18 @@ import {
   del,
   requestBody,
   response,
+  Response,
+  RestBindings,
 } from '@loopback/rest';
 import {Musica} from '../models';
 import {MusicaRepository} from '../repositories';
+import {inject} from '@loopback/core';
 
 export class MusicaController {
   constructor(
     @repository(MusicaRepository)
-    public musicaRepository : MusicaRepository,
+    public musicaRepository: MusicaRepository,
+    @inject(RestBindings.Http.RESPONSE) private response: Response,
   ) {}
 
   @post('/musicas')
@@ -52,9 +56,7 @@ export class MusicaController {
     description: 'Musica model count',
     content: {'application/json': {schema: CountSchema}},
   })
-  async count(
-    @param.where(Musica) where?: Where<Musica>,
-  ): Promise<Count> {
+  async count(@param.where(Musica) where?: Where<Musica>): Promise<Count> {
     return this.musicaRepository.count(where);
   }
 
@@ -70,10 +72,13 @@ export class MusicaController {
       },
     },
   })
-  async find(
-    @param.filter(Musica) filter?: Filter<Musica>,
-  ): Promise<Musica[]> {
-    return this.musicaRepository.find(filter);
+  async find(@param.filter(Musica) filter?: Filter<Musica>): Promise<Musica[]> {
+    const Data = this.musicaRepository.find(filter);
+
+    this.response.set('Access-Control-Expose-Headers', 'X-Total-Count');
+    this.response.set('x-total-count', (await Data).length.toString());
+
+    return Data;
   }
 
   @patch('/musicas')
@@ -106,7 +111,8 @@ export class MusicaController {
   })
   async findById(
     @param.path.number('id') id: number,
-    @param.filter(Musica, {exclude: 'where'}) filter?: FilterExcludingWhere<Musica>
+    @param.filter(Musica, {exclude: 'where'})
+    filter?: FilterExcludingWhere<Musica>,
   ): Promise<Musica> {
     return this.musicaRepository.findById(id, filter);
   }
